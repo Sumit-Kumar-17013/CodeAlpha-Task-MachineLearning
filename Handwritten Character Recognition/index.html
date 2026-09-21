@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NeuraDigit AI — Handwritten Digit Recognition</title>
+<meta name="description" content="Upload or draw a handwritten digit and watch a PyTorch convolutional network classify it in real time." />
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body data-theme="dark">
+
+<canvas id="bg-particles" aria-hidden="true"></canvas>
+
+<div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+<a class="skip-link" href="#workspace">Skip to prediction workspace</a>
+
+<!-- ===================== HEADER ===================== -->
+<header class="site-header">
+  <div class="header-inner">
+    <a href="#top" class="brand" aria-label="NeuraDigit home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26" fill="none">
+          <circle cx="6" cy="8" r="2.4" fill="currentColor"/>
+          <circle cx="6" cy="24" r="2.4" fill="currentColor"/>
+          <circle cx="16" cy="16" r="2.6" fill="currentColor"/>
+          <circle cx="26" cy="8" r="2.4" fill="currentColor"/>
+          <circle cx="26" cy="24" r="2.4" fill="currentColor"/>
+          <path d="M6 8 16 16 6 24M26 8 16 16 26 24" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+        </svg>
+      </span>
+      <span class="brand-name">NeuraDigit</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href="#top">Home</a>
+      <a href="#workspace">Predict</a>
+      <a href="#model">Model</a>
+      <a href="#about">About</a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="status-pill" id="api-status-pill" aria-live="polite">
+        <span class="status-dot" id="api-status-dot"></span>
+        <span id="api-status-text">Checking API…</span>
+      </div>
+      <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to light theme" aria-pressed="false">
+        <svg id="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg id="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" hidden><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="hero-kicker">Computer vision, running live in your browser</p>
+        <h1>See a neural network<br>read your handwriting</h1>
+        <p class="hero-sub">Upload or draw a single digit and a PyTorch convolutional network — trained on MNIST — classifies it in milliseconds, with a confidence score straight from its softmax output.</p>
+        <div class="hero-actions">
+          <a href="#workspace" class="btn btn-primary">Try a prediction</a>
+          <a href="#model" class="btn btn-ghost">Explore the model</a>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <canvas id="neural-canvas"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PREDICTION WORKSPACE ===================== -->
+  <section class="workspace" id="workspace">
+    <div class="section-inner">
+
+      <div class="workspace-card glass">
+        <div class="workspace-head">
+          <h2>Digit recognition</h2>
+          <p>Upload an image of one handwritten digit, or draw one directly.</p>
+        </div>
+
+        <div class="mode-tabs" role="tablist" aria-label="Input mode">
+          <button type="button" class="mode-tab is-active" id="tab-upload" role="tab" aria-selected="true" aria-controls="panel-upload">Upload image</button>
+          <button type="button" class="mode-tab" id="tab-draw" role="tab" aria-selected="false" aria-controls="panel-draw">Draw digit</button>
+        </div>
+
+        <!-- Upload panel -->
+        <div class="mode-panel is-active" id="panel-upload" role="tabpanel" aria-labelledby="tab-upload">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button"
+               aria-label="Drop a digit image here, or press Enter to browse for a file">
+            <input type="file" id="file-input" accept="image/png,image/jpeg,image/jpg,image/webp" hidden />
+            <svg class="dropzone-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M12 16V4M12 4l-4 4M12 4l4 4"/>
+              <path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16"/>
+            </svg>
+            <p class="dropzone-title">Drop your digit image here</p>
+            <p class="dropzone-sub">or click to browse — PNG, JPG or WEBP</p>
+            <p class="dropzone-note">Images are converted to grayscale and resized to 28 × 28 before inference.</p>
+          </div>
+
+          <div class="preview-card" id="preview-card" hidden>
+            <div class="preview-image-wrap">
+              <img id="preview-image" alt="Preview of the uploaded digit" />
+            </div>
+            <div class="preview-meta">
+              <dl>
+                <div><dt>File</dt><dd id="meta-filename">—</dd></div>
+                <div><dt>Dimensions</dt><dd id="meta-dimensions">—</dd></div>
+                <div><dt>Size</dt><dd id="meta-filesize">—</dd></div>
+              </dl>
+              <button type="button" class="btn btn-text" id="remove-image">Remove image</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Draw panel -->
+        <div class="mode-panel" id="panel-draw" role="tabpanel" aria-labelledby="tab-draw" hidden>
+          <div class="draw-wrap">
+            <canvas id="draw-canvas" width="280" height="280" aria-label="Drawing canvas — draw a single digit with mouse or touch" role="img"></canvas>
+            <div class="draw-actions">
+              <button type="button" class="btn btn-ghost" id="clear-canvas">Clear</button>
+              <p class="dropzone-note">Draw one digit, centered, with a thick stroke.</p>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-predict" id="predict-btn" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+            <path d="M9 3a3 3 0 0 0-3 3v.3A3.5 3.5 0 0 0 4 9.5v0A3.5 3.5 0 0 0 3.5 16 3.5 3.5 0 0 0 6 21.9M15 3a3 3 0 0 1 3 3v.3A3.5 3.5 0 0 1 20 9.5v0a3.5 3.5 0 0 1 .5 6.5 3.5 3.5 0 0 1-2.5 5.9"/>
+            <path d="M9 3v18M15 3v18"/>
+          </svg>
+          <span id="predict-btn-label">Predict digit</span>
+        </button>
+
+        <div class="loading-stages" id="loading-stages" hidden aria-live="polite">
+          <div class="stage" data-stage="upload">Uploading image</div>
+          <div class="stage" data-stage="preprocess">Preprocessing</div>
+          <div class="stage" data-stage="cnn">Running CNN</div>
+          <div class="stage" data-stage="confidence">Calculating confidence</div>
+        </div>
+
+        <!-- Result -->
+        <div class="result-card" id="result-card" hidden>
+          <div class="result-main">
+            <p class="result-label">Predicted digit</p>
+            <div class="result-ring-wrap">
+              <svg class="result-ring" viewBox="0 0 160 160" aria-hidden="true">
+                <defs>
+                  <linearGradient id="ring-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#4c8dff"/>
+                    <stop offset="100%" stop-color="#8b5cf6"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ring-track" cx="80" cy="80" r="70"/>
+                <circle class="ring-fill" id="ring-fill" cx="80" cy="80" r="70"/>
+              </svg>
+              <span class="result-digit" id="result-digit">–</span>
+            </div>
+            <p class="result-message" id="result-message"></p>
+          </div>
+          <div class="result-confidence">
+            <div class="confidence-head">
+              <span>Confidence</span>
+              <span id="confidence-value">0%</span>
+            </div>
+            <div class="confidence-bar-track">
+              <div class="confidence-bar-fill" id="confidence-bar-fill"></div>
+            </div>
+            <p class="confidence-note" id="confidence-note"></p>
+            <p class="confidence-caveat">This is the model's softmax confidence, not a guarantee of correctness.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== VISION PIPELINE ===================== -->
+  <section class="pipeline" aria-labelledby="pipeline-heading">
+    <div class="section-inner">
+      <h2 id="pipeline-heading" class="section-heading">What happens to your image</h2>
+      <div class="pipeline-flow" id="pipeline-flow">
+        <div class="pipeline-step"><span class="pipeline-index">1</span><span>Uploaded image</span></div>
+        <div class="pipeline-step"><span class="pipeline-index">2</span><span>Grayscale conversion</span></div>
+        <div class="pipeline-step"><span class="pipeline-index">3</span><span>Resize to 28×28</span></div>
+        <div class="pipeline-step"><span class="pipeline-index">4</span><span>Tensor</span></div>
+        <div class="pipeline-step"><span class="pipeline-index">5</span><span>CNN inference</span></div>
+        <div class="pipeline-step"><span class="pipeline-index">6</span><span>Prediction</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MODEL ARCHITECTURE ===================== -->
+  <section class="architecture" id="model" aria-labelledby="architecture-heading">
+    <div class="section-inner">
+      <h2 id="architecture-heading" class="section-heading">Inside the model</h2>
+      <p class="section-sub">SimpleCNN — two convolutional blocks feeding a small classifier head.</p>
+
+      <div class="arch-flow" id="arch-flow">
+        <div class="arch-node"><span class="arch-node-title">Input</span><span class="arch-node-sub">28 × 28 grayscale</span></div>
+        <div class="arch-node"><span class="arch-node-title">Conv2D</span><span class="arch-node-sub">8 filters, 3×3</span></div>
+        <div class="arch-node"><span class="arch-node-title">ReLU + MaxPool</span><span class="arch-node-sub">→ 14 × 14</span></div>
+        <div class="arch-node"><span class="arch-node-title">Conv2D</span><span class="arch-node-sub">16 filters, 3×3</span></div>
+        <div class="arch-node"><span class="arch-node-title">ReLU + MaxPool</span><span class="arch-node-sub">→ 7 × 7</span></div>
+        <div class="arch-node"><span class="arch-node-title">Flatten</span><span class="arch-node-sub">16 × 7 × 7 = 784</span></div>
+        <div class="arch-node"><span class="arch-node-title">Dense</span><span class="arch-node-sub">64 units, ReLU</span></div>
+        <div class="arch-node arch-node-final"><span class="arch-node-title">Output</span><span class="arch-node-sub">10 classes</span></div>
+      </div>
+
+      <div class="info-cards">
+        <div class="info-card"><span class="info-card-label">Model</span><span class="info-card-value">SimpleCNN</span></div>
+        <div class="info-card"><span class="info-card-label">Framework</span><span class="info-card-value">PyTorch</span></div>
+        <div class="info-card"><span class="info-card-label">Dataset</span><span class="info-card-value">MNIST</span></div>
+        <div class="info-card"><span class="info-card-label">Input size</span><span class="info-card-value">28 × 28</span></div>
+        <div class="info-card"><span class="info-card-label">Classes</span><span class="info-card-value">10</span></div>
+        <div class="info-card"><span class="info-card-label">Weights file</span><span class="info-card-value">SimpleCNN.pth</span></div>
+        <div class="info-card"><span class="info-card-label">Device</span><span class="info-card-value" id="model-device">—</span></div>
+        <div class="info-card"><span class="info-card-label">Model loaded</span><span class="info-card-value" id="model-loaded">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== HOW IT WORKS ===================== -->
+  <section class="how-it-works" aria-labelledby="how-heading">
+    <div class="section-inner">
+      <h2 id="how-heading" class="section-heading">How it works</h2>
+      <ol class="steps-list" id="steps-list">
+        <li class="step-item">
+          <span class="step-index">01</span>
+          <div><h3>Upload an image</h3><p>Drop a photo or drawing of a single digit, or use the draw tool.</p></div>
+        </li>
+        <li class="step-item">
+          <span class="step-index">02</span>
+          <div><h3>Preprocess</h3><p>The image is converted to grayscale and resized to 28 × 28 pixels.</p></div>
+        </li>
+        <li class="step-item">
+          <span class="step-index">03</span>
+          <div><h3>CNN analysis</h3><p>Two convolutional blocks extract features from the pixel grid.</p></div>
+        </li>
+        <li class="step-item">
+          <span class="step-index">04</span>
+          <div><h3>Prediction</h3><p>A softmax over 10 classes returns the predicted digit and confidence.</p></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===================== PREDICTION HISTORY ===================== -->
+  <section class="history" aria-labelledby="history-heading">
+    <div class="section-inner">
+      <div class="history-head">
+        <h2 id="history-heading" class="section-heading">Recent predictions</h2>
+        <button type="button" class="btn btn-text" id="clear-history">Clear history</button>
+      </div>
+      <p class="section-sub">Stored only in this browser — never sent anywhere.</p>
+      <ul class="history-list" id="history-list">
+        <li class="history-empty" id="history-empty">No predictions yet.</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="site-footer" id="about">
+  <div class="section-inner footer-inner">
+    <div>
+      <p class="footer-brand">NeuraDigit AI</p>
+      <p class="footer-sub">Powered by PyTorch + FastAPI · MNIST handwritten digit classification</p>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="#model">Model</a>
+      <a href="#" id="footer-api-link">API</a>
+      <a href="#" id="footer-github-link">GitHub</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
